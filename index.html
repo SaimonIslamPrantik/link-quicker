@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>URL Shortener</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { 
+      font-family: system-ui, -apple-system, sans-serif; 
+      max-width: 500px; 
+      margin: 50px auto; 
+      padding: 20px; 
+    }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: 600; }
+    input { 
+      width: 100%; 
+      padding: 10px; 
+      box-sizing: border-box; 
+      border: 1px solid #ccc; 
+      border-radius: 4px; 
+    }
+    button { 
+      width: 100%; 
+      padding: 10px; 
+      background-color: #3ecf8e; 
+      color: white; 
+      border: none; 
+      border-radius: 4px; 
+      font-weight: bold; 
+      cursor: pointer; 
+    }
+    button:hover { background-color: #34b27b; }
+    #result { margin-top: 20px; font-weight: bold; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <h2>URL Shortener</h2>
+  <form id="shortener-form">
+    <div class="form-group">
+      <label for="url">Destination URL:</label>
+      <input type="url" id="url" placeholder="https://example.com/long-page" required>
+    </div>
+    
+    <div class="form-group">
+      <label for="slug">Custom Short Code (optional):</label>
+      <input type="text" id="slug" placeholder="e.g., promo2026">
+    </div>
+    
+    <button type="submit">Create Short Link</button>
+  </form>
+
+  <div id="result"></div>
+
+  <script>
+    // These placeholders will be replaced by GitHub Actions during deployment
+    const SUPABASE_URL = 'BUILD_ENV_SUPABASE_URL';
+    const SUPABASE_ANON_KEY = 'BUILD_ENV_SUPABASE_ANON_KEY';
+    
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Random string helper for short codes
+    function generateSlug(length = 6) {
+      const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    }
+
+    document.getElementById('shortener-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const url = document.getElementById('url').value;
+      let slug = document.getElementById('slug').value.trim() || generateSlug();
+      const resultDiv = document.getElementById('result');
+
+      resultDiv.innerText = 'Creating link...';
+
+      const { data, error } = await supabaseClient
+        .from('urls')
+        .insert([{ slug: slug, destination_url: url }]);
+
+      if (error) {
+        resultDiv.innerText = 'Error: ' + (error.message.includes('duplicate') ? 'Slug already taken.' : error.message);
+      } else {
+        const shortUrl = `${window.location.origin}/${slug}`;
+        resultDiv.innerHTML = `Short link: <a href="${shortUrl}" target="_blank">${shortUrl}</a>`;
+      }
+    });
+  </script>
+</body>
+</html>
