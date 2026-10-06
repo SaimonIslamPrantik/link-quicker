@@ -1,265 +1,56 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Loading...</title>
-  <!-- Supabase JS Client -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // --- GTA Loading Screen Slide Cycling ---
+  const slides = document.querySelectorAll('.gta-slide');
+  let currentSlide = 0;
 
-  <!-- Pricedown / GTA Style Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Changa+One:ital@0;1&family=Palanquin+Dark:wght@700&family=Impact&display=swap" rel="stylesheet">
+  setInterval(() => {
+    slides[currentSlide].classList.remove('active');
+    currentSlide = (currentSlide + 1) % slides.length;
+    slides[currentSlide].classList.add('active');
+  }, 4000);
 
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      user-select: none;
+  // --- Supabase Redirect Handler ---
+  const SUPABASE_URL = 'BUILD_ENV_SUPABASE_URL';
+  const SUPABASE_ANON_KEY = 'BUILD_ENV_SUPABASE_ANON_KEY';
+  
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  async function handleRedirect() {
+    const path = window.location.pathname;
+    const slug = path.substring(1).replace(/\/$/, '');
+
+    if (!slug) {
+      window.location.href = '/';
+      return;
     }
 
-    body, html {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background-color: #000;
-      font-family: 'Palanquin Dark', 'Impact', sans-serif;
-      color: #fff;
-    }
+    try {
+      const { data, error } = await supabaseClient
+        .from('urls')
+        .select('destination_url')
+        .eq('slug', slug)
+        .single();
 
-    /* Fullscreen background slide container */
-    .gta-container {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: #050505;
-    }
-
-    /* Dynamic Slide Image Layer */
-    .gta-slide {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-size: cover;
-      background-position: center;
-      opacity: 0;
-      transform: scale(1.05);
-      transition: opacity 1.2s ease-in-out, transform 7s linear;
-      filter: contrast(115%) brightness(90%);
-    }
-
-    .gta-slide.active {
-      opacity: 1;
-      transform: scale(1);
-    }
-
-    /* GTA Vignette Effect & Dark Gradients */
-    .vignette {
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.85) 90%),
-                  linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 40%),
-                  linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 30%);
-      z-index: 2;
-    }
-
-    /* GTA IV Watermark Logo Header */
-    .gta-logo {
-      position: absolute;
-      top: 40px;
-      left: 50px;
-      z-index: 3;
-      text-transform: uppercase;
-      letter-spacing: -1px;
-      line-height: 0.85;
-      text-shadow: 3px 3px 0px #000, -2px -2px 0px #000, 2px -2px 0px #000, -2px 2px 0px #000;
-    }
-
-    .gta-logo .title {
-      font-family: 'Changa One', 'Impact', sans-serif;
-      font-size: 3.5rem;
-      color: #fff;
-      display: block;
-      transform: scaleY(1.1);
-    }
-
-    .gta-logo .subtitle {
-      font-size: 1.1rem;
-      color: #e2ab20;
-      font-weight: 800;
-      letter-spacing: 4px;
-      margin-top: 5px;
-      display: block;
-    }
-
-    /* Bottom Status & Hints Bar */
-    .gta-footer {
-      position: absolute;
-      bottom: 40px;
-      left: 50px;
-      right: 50px;
-      z-index: 3;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-    }
-
-    .status-box {
-      max-width: 600px;
-    }
-
-    .status-title {
-      font-size: 1.8rem;
-      font-weight: 900;
-      color: #f1f1f1;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
-      margin-bottom: 4px;
-    }
-
-    .status-desc {
-      font-size: 0.95rem;
-      color: #cccccc;
-      letter-spacing: 0.5px;
-      text-shadow: 1px 1px 3px rgba(0,0,0,0.9);
-      text-transform: uppercase;
-    }
-
-    /* GTA Style Spinning Loader Bottom-Right */
-    .loader-wrapper {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-    }
-
-    .gta-spinner {
-      width: 42px;
-      height: 42px;
-      border: 4px solid rgba(255, 255, 255, 0.15);
-      border-top: 4px solid #e2ab20;
-      border-right: 4px solid #e2ab20;
-      border-radius: 50%;
-      animation: gtaSpin 0.8s linear infinite;
-    }
-
-    @keyframes gtaSpin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* Error state overlay styling */
-    .error-mode .gta-spinner {
-      border-top-color: #ff3333;
-      border-right-color: #ff3333;
-      animation-play-state: paused;
-    }
-
-    .error-mode .status-title {
-      color: #ff3333;
-    }
-
-    /* Responsive scaling */
-    @media (max-width: 768px) {
-      .gta-logo { top: 25px; left: 25px; }
-      .gta-logo .title { font-size: 2.4rem; }
-      .gta-footer { left: 25px; right: 25px; bottom: 25px; flex-direction: column-reverse; align-items: flex-start; gap: 20px; }
-      .status-title { font-size: 1.3rem; }
-    }
-  </style>
-</head>
-<body>
-
-  <div class="gta-container" id="gtaContainer">
-    <!-- Background Slides -->
-    <div class="gta-slide active" style="background-image: url('https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&w=1920&q=80');"></div>
-    <div class="gta-slide" style="background-image: url('https://images.unsplash.com/photo-1508873696983-2df515122519?auto=format&fit=crop&w=1920&q=80');"></div>
-    <div class="gta-slide" style="background-image: url('https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=1920&q=80');"></div>
-
-    <!-- Dark Vignette Overlay -->
-    <div class="vignette"></div>
-
-    <!-- GTA Header Branding -->
-    <div class="gta-logo">
-      <span class="title">WAIT...</span>
-      <span class="subtitle">REDIRECTING SYSTEM</span>
-    </div>
-
-    <!-- Bottom Status & GTA Loader -->
-    <div class="gta-footer">
-      <div class="status-box">
-        <div class="status-title" id="statusTitle">Connecting to Destination...</div>
-        <div class="status-desc" id="statusDesc">Please wait while the server verifies your request.</div>
-      </div>
-
-      <div class="loader-wrapper">
-        <div class="gta-spinner" id="spinner"></div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // --- GTA Loading Screen Slide Cycling ---
-    const slides = document.querySelectorAll('.gta-slide');
-    let currentSlide = 0;
-
-    setInterval(() => {
-      slides[currentSlide].classList.remove('active');
-      currentSlide = (currentSlide + 1) % slides.length;
-      slides[currentSlide].classList.add('active');
-    }, 4000);
-
-    // --- Supabase Redirect Handler ---
-    const SUPABASE_URL = 'BUILD_ENV_SUPABASE_URL';
-    const SUPABASE_ANON_KEY = 'BUILD_ENV_SUPABASE_ANON_KEY';
-    
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    async function handleRedirect() {
-      const path = window.location.pathname;
-      const slug = path.substring(1).replace(/\/$/, '');
-
-      if (!slug) {
-        window.location.href = '/';
+      if (error || !data) {
+        showError('404 - LINK NOT FOUND', 'The requested link has expired or does not exist in Liberty City.');
         return;
       }
 
-      try {
-        const { data, error } = await supabaseClient
-          .from('urls')
-          .select('destination_url')
-          .eq('slug', slug)
-          .single();
+      // 1-second artificial delay to allow the GTA loading screen experience before redirecting
+      setTimeout(() => {
+        window.location.replace(data.destination_url);
+      }, 1000);
 
-        if (error || !data) {
-          showError('404 - LINK NOT FOUND', 'The requested link has expired or does not exist in Liberty City.');
-          return;
-        }
-
-        // Brief artificial delay (300ms) to enjoy the loading screen transition
-        setTimeout(() => {
-          window.location.replace(data.destination_url);
-        }, 300);
-
-      } catch (err) {
-        showError('SYSTEM ERROR', 'Failed to establish connection with Supabase database.');
-      }
+    } catch (err) {
+      showError('SYSTEM ERROR', 'Failed to establish connection with Supabase database.');
     }
+  }
 
-    function showError(title, desc) {
-      document.getElementById('gtaContainer').classList.add('error-mode');
-      document.getElementById('statusTitle').innerText = title;
-      document.getElementById('statusDesc').innerText = desc;
-    }
+  function showError(title, desc) {
+    document.getElementById('gtaContainer').classList.add('error-mode');
+    document.getElementById('statusTitle').innerText = title;
+    document.getElementById('statusDesc').innerText = desc;
+  }
 
-    handleRedirect();
-  </script>
-</body>
-</html>
+  handleRedirect();
+</script>
