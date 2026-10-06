@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Redirecting...</title>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <p id="status">Redirecting...</p>
+
+  <script>
+    const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    async function handleRedirect() {
+      // Extract slug from path (e.g., "/my-slug" -> "my-slug")
+      const path = window.location.pathname;
+      const slug = path.substring(1).replace(/\/$/, '');
+
+      if (!slug) {
+        window.location.href = '/';
+        return;
+      }
+
+      // Query Supabase for destination
+      const { data, error } = await supabaseClient
+        .from('urls')
+        .select('destination_url')
+        .eq('slug', slug)
+        .single();
+
+      if (error || !data) {
+        document.getElementById('status').innerText = 'Link not found or expired.';
+        return;
+      }
+
+      // Redirect user immediately
+      window.location.replace(data.destination_url);
+    }
+
+    handleRedirect();
+  </script>
+</body>
+</html>
