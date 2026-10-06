@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Redirecting...</title>
   <!-- Supabase JS Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -10,12 +11,14 @@
   <p id="status">Redirecting...</p>
 
   <script>
-    const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    // These placeholders will be replaced by GitHub Actions during deployment
+    const SUPABASE_URL = 'BUILD_ENV_SUPABASE_URL';
+    const SUPABASE_ANON_KEY = 'BUILD_ENV_SUPABASE_ANON_KEY';
+    
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     async function handleRedirect() {
-      // Extract slug from path (e.g., "/my-slug" -> "my-slug")
+      // Get slug from URL path (e.g., "/my-slug" -> "my-slug")
       const path = window.location.pathname;
       const slug = path.substring(1).replace(/\/$/, '');
 
@@ -24,7 +27,7 @@
         return;
       }
 
-      // Query Supabase for destination
+      // Query Supabase database
       const { data, error } = await supabaseClient
         .from('urls')
         .select('destination_url')
@@ -36,7 +39,7 @@
         return;
       }
 
-      // Redirect user immediately
+      // Redirect immediately
       window.location.replace(data.destination_url);
     }
 
