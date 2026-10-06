@@ -2,89 +2,482 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>URL Shortener</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#06101f">
+  <title>link-quicker</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { 
-      font-family: system-ui, -apple-system, sans-serif; 
-      max-width: 500px; 
-      margin: 50px auto; 
-      padding: 20px; 
+    :root {
+      --ink: #e8f1fb;
+      --ink-dim: #9db4cc;
+      --glass: rgba(16, 28, 46, 0.58);
+      --glass-edge: rgba(255, 255, 255, 0.32);
+      --accent: #5cc0ff;
+      --danger: #ff6b5c;
+      --ok: #7be39a;
     }
-    .form-group { margin-bottom: 15px; }
-    label { display: block; margin-bottom: 5px; font-weight: 600; }
-    input { 
-      width: 100%; 
-      padding: 10px; 
-      box-sizing: border-box; 
-      border: 1px solid #ccc;
-      border-radius: 4px; 
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: "Segoe UI", "Frutiger", "Trebuchet MS", system-ui, sans-serif;
+      color: var(--ink);
+      background: url('background.png') no-repeat center center fixed;
+      background-size: cover;
+      overflow-x: hidden;
     }
-    button { 
-      width: 100%; 
-      padding: 10px; 
-      background-color: #3ecf8e; 
-      color: white; 
-      border: none; 
-      border-radius: 4px; 
-      font-weight: bold; 
-      cursor: pointer; 
+    /* Aero bokeh orbs */
+    .orb { position: fixed; border-radius: 50%; pointer-events: none; filter: blur(2px); opacity: .5;
+      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.55), rgba(120,200,255,.15) 45%, transparent 70%); }
+    .orb.a { width: 220px; height: 220px; top: -60px; left: -50px; }
+    .orb.b { width: 140px; height: 140px; top: 38%; right: -40px; }
+    .orb.c { width: 260px; height: 260px; bottom: 40px; left: 18%; opacity: .3; }
+
+    main {
+      position: relative; z-index: 1;
+      min-height: 100%;
+      padding: 28px 14px calc(70px + env(safe-area-inset-bottom));
+      display: flex; flex-direction: column; align-items: center; gap: 22px;
     }
-    button:hover { background-color: #34b27b; }
-    #result { margin-top: 20px; font-weight: bold; word-break: break-all; }
+
+    /* ---------- Aero window ---------- */
+    .win {
+      width: 100%; max-width: 560px;
+      background: var(--glass);
+      border: 1px solid var(--glass-edge);
+      border-radius: 10px;
+      box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 18px 50px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.35);
+      backdrop-filter: blur(16px) saturate(1.5);
+      -webkit-backdrop-filter: blur(16px) saturate(1.5);
+      position: relative; overflow: hidden;
+    }
+    .win::before { /* diagonal glass streak */
+      content: ""; position: absolute; inset: 0; pointer-events: none;
+      background: linear-gradient(118deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,.05) 28%, transparent 28.2%);
+    }
+    .titlebar {
+      position: relative; display: flex; align-items: center; gap: 8px;
+      padding: 6px 6px 6px 12px;
+      background: linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,.06) 50%, rgba(255,255,255,.02) 51%, rgba(255,255,255,.1));
+      border-bottom: 1px solid rgba(0,0,0,.5);
+      text-shadow: 0 0 8px rgba(120,200,255,.9), 0 1px 2px #000;
+      font-size: 14px;
+    }
+    .titlebar .ico { width: 16px; height: 16px; border-radius: 4px;
+      background: linear-gradient(135deg, #9be0ff, #2a86d0); box-shadow: inset 0 0 0 1px rgba(255,255,255,.6); }
+    .titlebar .name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .caps { display: flex; border: 1px solid rgba(0,0,0,.6); border-radius: 0 0 6px 6px; overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.4); margin-top: -6px; }
+    .cap { width: 28px; height: 20px; border: 0; padding: 0; color: #fff; font-size: 11px; cursor: default;
+      background: linear-gradient(180deg, rgba(255,255,255,.35), rgba(255,255,255,.08) 50%, rgba(0,0,0,.2) 51%, rgba(255,255,255,.12)); }
+    .cap + .cap { border-left: 1px solid rgba(0,0,0,.45); }
+    .cap.x { width: 46px; background: linear-gradient(180deg, #f1a798, #d6523c 50%, #b3281a 51%, #e5705a); }
+    .body { position: relative; padding: 16px; }
+
+    /* ---------- Form ---------- */
+    .hint { margin: 0 0 14px; color: var(--ink-dim); font-size: 13px; }
+    label { display: block; margin: 0 0 5px; font-size: 13px; font-weight: 600; text-shadow: 0 1px 2px #000; }
+    .field { margin-bottom: 14px; }
+    input {
+      width: 100%; padding: 11px 12px; font: inherit; font-size: 16px; color: var(--ink);
+      background: rgba(2, 8, 18, 0.55);
+      border: 1px solid rgba(255,255,255,.22); border-top-color: rgba(0,0,0,.7);
+      border-radius: 5px; outline: none;
+      box-shadow: inset 0 2px 5px rgba(0,0,0,.6);
+      transition: border-color .15s, box-shadow .15s;
+    }
+    input::placeholder { color: #5f7892; }
+    input:focus { border-color: var(--accent); box-shadow: inset 0 2px 5px rgba(0,0,0,.6), 0 0 0 2px rgba(92,192,255,.35), 0 0 14px rgba(92,192,255,.45); }
+
+    .btn {
+      font: inherit; font-weight: 600; font-size: 14px; color: #fff; cursor: pointer;
+      padding: 10px 18px; border-radius: 6px; border: 1px solid rgba(0,20,50,.9);
+      text-shadow: 0 -1px 0 rgba(0,0,0,.5);
+      background: linear-gradient(180deg, #7fcbf5 0%, #3b93d6 49%, #1c68ad 50%, #3fa0e0 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.65), inset 0 0 0 1px rgba(255,255,255,.12), 0 2px 6px rgba(0,0,0,.5);
+      transition: filter .15s, box-shadow .15s, transform .05s;
+    }
+    .btn:hover { filter: brightness(1.15); box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 16px rgba(92,192,255,.7), 0 2px 6px rgba(0,0,0,.5); }
+    .btn:active { transform: translateY(1px); filter: brightness(.92); }
+    .btn:disabled { opacity: .6; cursor: wait; }
+    .btn:focus-visible, .mini:focus-visible, .cap:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    .btn.wide { width: 100%; padding: 12px; font-size: 15px; }
+    .btn.glass { background: linear-gradient(180deg, rgba(255,255,255,.3), rgba(255,255,255,.08) 49%, rgba(0,0,0,.25) 50%, rgba(255,255,255,.12)); border-color: rgba(0,0,0,.7); }
+    .btn.red { background: linear-gradient(180deg, #f5a597 0%, #de5a44 49%, #b02a1a 50%, #e4705a 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 2px 6px rgba(0,0,0,.5); }
+    .btn.red:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 0 16px rgba(255,107,92,.75), 0 2px 6px rgba(0,0,0,.5); }
+
+    #result { margin-top: 14px; font-size: 14px; word-break: break-all; min-height: 0; }
+    #result .ok { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap;
+      padding: 10px 12px; border-radius: 6px; background: rgba(123,227,154,.1); border: 1px solid rgba(123,227,154,.45); }
+    #result .err { padding: 10px 12px; border-radius: 6px; background: rgba(255,107,92,.12); border: 1px solid rgba(255,107,92,.5); color: #ffc2ba; }
+    #result a { color: var(--ok); font-weight: 700; text-decoration: none; }
+    #result a:hover { text-decoration: underline; }
+    #result .busy { color: var(--ink-dim); }
+
+    /* ---------- History ---------- */
+    .hist-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .hist-head h3 { margin: 0; font-size: 15px; font-weight: 600; text-shadow: 0 1px 2px #000; }
+    .badge { display: inline-block; min-width: 22px; padding: 1px 7px; margin-left: 6px; border-radius: 20px; font-size: 12px; text-align: center;
+      background: rgba(92,192,255,.25); border: 1px solid rgba(92,192,255,.6); }
+    #list { list-style: none; margin: 0; padding: 0; max-height: 52vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 2px; }
+    #list::-webkit-scrollbar { width: 10px; }
+    #list::-webkit-scrollbar-track { background: rgba(0,0,0,.35); border-radius: 6px; }
+    #list::-webkit-scrollbar-thumb { background: linear-gradient(90deg, rgba(255,255,255,.35), rgba(255,255,255,.15)); border-radius: 6px; border: 1px solid rgba(0,0,0,.5); }
+    .item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 12px;
+      background: linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.02));
+      border: 1px solid rgba(255,255,255,.16); border-radius: 7px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+      transition: opacity .25s, transform .25s, border-color .15s, background .15s;
+    }
+    .item:hover { border-color: rgba(92,192,255,.6); background: linear-gradient(180deg, rgba(120,200,255,.18), rgba(255,255,255,.03)); }
+    .item.gone { opacity: 0; transform: translateX(24px); }
+    .meta { flex: 1; min-width: 0; }
+    .meta a { color: var(--accent); font-weight: 700; text-decoration: none; font-size: 15px; word-break: break-all; }
+    .meta a:hover { text-decoration: underline; }
+    .meta .dest { font-size: 12px; color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    .meta .when { font-size: 11px; color: #6f89a3; margin-top: 2px; }
+    .acts { display: flex; gap: 6px; }
+    .mini {
+      width: 34px; height: 34px; padding: 0; border-radius: 6px; cursor: pointer; color: #fff; font-size: 15px;
+      border: 1px solid rgba(0,0,0,.7);
+      background: linear-gradient(180deg, rgba(255,255,255,.32), rgba(255,255,255,.07) 49%, rgba(0,0,0,.25) 50%, rgba(255,255,255,.1));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.4);
+      transition: box-shadow .15s, filter .15s;
+    }
+    .mini:hover { filter: brightness(1.25); box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 0 12px rgba(92,192,255,.7); }
+    .mini.del:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 0 12px rgba(255,107,92,.85); background: linear-gradient(180deg, #f5a597, #d6523c 49%, #a82414 50%, #e4705a); }
+    .empty { text-align: center; color: var(--ink-dim); padding: 26px 10px; font-size: 14px; }
+
+    /* ---------- Dialog ---------- */
+    .scrim { position: fixed; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; padding: 16px;
+      background: rgba(2, 6, 14, .6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+    .scrim.open { display: flex; }
+    .scrim .win { max-width: 380px; animation: pop .18s ease-out; }
+    @keyframes pop { from { transform: scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }
+    .dlg-row { display: flex; gap: 14px; align-items: flex-start; }
+    .warn { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 22px; color: #3b2a00;
+      background: radial-gradient(circle at 35% 30%, #fff3b0, #f2b928 60%, #b9830a); box-shadow: 0 0 14px rgba(242,185,40,.6); }
+    .dlg-row p { margin: 0 0 4px; font-size: 14px; }
+    .dlg-row code { color: var(--accent); word-break: break-all; }
+    .dlg-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+    /* ---------- Toast ---------- */
+    #toast { position: fixed; left: 50%; bottom: calc(64px + env(safe-area-inset-bottom)); transform: translate(-50%, 20px); z-index: 30;
+      padding: 9px 16px; border-radius: 20px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+      background: rgba(10, 20, 36, .85); border: 1px solid var(--glass-edge); box-shadow: 0 6px 20px rgba(0,0,0,.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    /* ---------- Taskbar ---------- */
+    .taskbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; height: calc(44px + env(safe-area-inset-bottom)); padding: 0 10px env(safe-area-inset-bottom);
+      display: flex; align-items: center; gap: 10px;
+      background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.05) 48%, rgba(0,0,0,.35) 50%, rgba(10,20,36,.7));
+      border-top: 1px solid rgba(255,255,255,.4); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+    .orbstart { width: 34px; height: 34px; border-radius: 50%; flex: none;
+      background: radial-gradient(circle at 35% 28%, #d8f3ff 0%, #4db6ee 35%, #1565b0 70%, #0a2f63 100%);
+      box-shadow: 0 0 0 1px rgba(0,0,0,.7), 0 0 14px rgba(92,192,255,.8), inset 0 -3px 6px rgba(0,0,0,.4); }
+    .task { padding: 5px 14px; font-size: 13px; border-radius: 5px; border: 1px solid rgba(255,255,255,.35);
+      background: linear-gradient(180deg, rgba(255,255,255,.3), rgba(255,255,255,.08)); box-shadow: inset 0 0 12px rgba(120,200,255,.25); white-space: nowrap; }
+    #clock { margin-left: auto; font-size: 12px; text-align: right; line-height: 1.25; text-shadow: 0 1px 2px #000; }
+
+    @media (max-width: 480px) {
+      main { padding-top: 16px; gap: 16px; }
+      .item { flex-wrap: wrap; }
+      .meta { flex-basis: 100%; }
+      .acts { width: 100%; }
+      .acts .mini { flex: 1; width: auto; }
+      #list { max-height: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
   </style>
 </head>
 <body>
-  <h2>URL Shortener</h2>
-  <form id="shortener-form">
-    <div class="form-group">
-      <label for="url">Destination URL:</label>
-      <input type="url" id="url" placeholder="https://example.com/long-page" required>
-    </div>
-    
-    <div class="form-group">
-      <label for="slug">Custom Short Code (optional):</label>
-      <input type="text" id="slug" placeholder="e.g., promo2026">
-    </div>
-    
-    <button type="submit">Create Short Link</button>
-  </form>
+  <div class="orb a"></div><div class="orb b"></div><div class="orb c"></div>
 
-  <div id="result"></div>
+  <main>
+    <!-- Create window -->
+    <section class="win" aria-label="Create short link">
+      <div class="titlebar">
+        <span class="ico"></span>
+        <span class="name">URL Shortener</span>
+        <div class="caps" aria-hidden="true"><button class="cap" tabindex="-1">&#8211;</button><button class="cap" tabindex="-1">&#9633;</button><button class="cap x" tabindex="-1">&#10005;</button></div>
+      </div>
+      <div class="body">
+        <p class="hint">Paste a long link and get a short one back.</p>
+        <form id="shortener-form" autocomplete="off">
+          <div class="field">
+            <label for="url">Destination URL</label>
+            <input type="url" id="url" placeholder="https://example.com/long-page" required>
+          </div>
+          <div class="field">
+            <label for="slug">Custom short code (optional)</label>
+            <input type="text" id="slug" placeholder="e.g. promo2026" maxlength="40" pattern="[A-Za-z0-9_\-]*" title="Letters, numbers, dashes and underscores only" autocapitalize="off" spellcheck="false">
+          </div>
+          <button type="submit" class="btn wide" id="go">Create short link</button>
+        </form>
+        <div id="result" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- History window -->
+    <section class="win" aria-label="Link history">
+      <div class="titlebar">
+        <span class="ico"></span>
+        <span class="name">Link history</span>
+        <div class="caps" aria-hidden="true"><button class="cap" tabindex="-1">&#8211;</button><button class="cap" tabindex="-1">&#9633;</button><button class="cap x" tabindex="-1">&#10005;</button></div>
+      </div>
+      <div class="body">
+        <div class="hist-head">
+          <h3>Your links<span class="badge" id="count">0</span></h3>
+          <button class="btn glass" id="refresh" type="button">Refresh</button>
+        </div>
+        <ul id="list"></ul>
+      </div>
+    </section>
+  </main>
+
+  <!-- Delete dialog -->
+  <div class="scrim" id="scrim" role="dialog" aria-modal="true" aria-labelledby="dlg-title">
+    <div class="win">
+      <div class="titlebar"><span class="ico"></span><span class="name" id="dlg-title">Delete short link</span></div>
+      <div class="body">
+        <div class="dlg-row">
+          <div class="warn">!</div>
+          <div>
+            <p>Delete <code id="dlg-slug"></code> from the database?</p>
+            <p style="color:var(--ink-dim);font-size:12px">The short link will stop working. This can't be undone.</p>
+          </div>
+        </div>
+        <div class="dlg-btns">
+          <button class="btn glass" id="dlg-no" type="button">Cancel</button>
+          <button class="btn red" id="dlg-yes" type="button">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" role="status"></div>
+
+  <div class="taskbar">
+    <div class="orbstart"></div>
+    <div class="task">URL Shortener</div>
+    <div id="clock"></div>
+  </div>
 
   <script>
     // These placeholders will be replaced by GitHub Actions during deployment
     const SUPABASE_URL = 'BUILD_ENV_SUPABASE_URL';
     const SUPABASE_ANON_KEY = 'BUILD_ENV_SUPABASE_ANON_KEY';
-    
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Random string helper for short codes
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const $ = (id) => document.getElementById(id);
+
+    // ---------- helpers ----------
     function generateSlug(length = 6) {
       const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
       return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     }
+    const shortUrlFor = (slug) => `${window.location.origin}/${slug}`;
 
-    document.getElementById('shortener-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const url = document.getElementById('url').value;
-      let slug = document.getElementById('slug').value.trim() || generateSlug();
-      const resultDiv = document.getElementById('result');
+    let toastTimer;
+    function toast(msg) {
+      const t = $('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+    }
 
-      resultDiv.innerText = 'Creating link...';
+    async function copy(text) {
+      try { await navigator.clipboard.writeText(text); }
+      catch {
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); } catch {}
+        ta.remove();
+      }
+      toast('Copied to clipboard');
+    }
 
-      const { data, error } = await supabaseClient
-        .from('urls')
-        .insert([{ slug: slug, destination_url: url }]);
+    function timeAgo(iso) {
+      if (!iso) return '';
+      const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+      const units = [[31536000, 'y'], [2592000, 'mo'], [86400, 'd'], [3600, 'h'], [60, 'm']];
+      for (const [n, u] of units) if (s >= n) return `${Math.floor(s / n)}${u} ago`;
+      return 'just now';
+    }
+
+    // ---------- clock ----------
+    function tick() {
+      const d = new Date();
+      $('clock').innerHTML = '';$('clock').append(
+        d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+        document.createElement('br'),
+        d.toLocaleDateString([], { month: 'numeric', day: 'numeric', year: 'numeric' })
+      );
+    }
+    tick(); setInterval(tick, 15000);
+
+    // ---------- history ----------
+    async function loadHistory() {
+      const list = $('list');
+      list.innerHTML = '<li class="empty">Loading…</li>';
+
+      // Newest first when a created_at column exists; otherwise fall back to default order
+      let { data, error } = await supabaseClient.from('urls').select('*').order('created_at', { ascending: false });
+      if (error) ({ data, error } = await supabaseClient.from('urls').select('*'));
 
       if (error) {
-        resultDiv.innerText = 'Error: ' + (error.message.includes('duplicate') ? 'Slug already taken.' : error.message);
-      } else {
-        const shortUrl = `${window.location.origin}/${slug}`;
-        resultDiv.innerHTML = `Short link: <a href="${shortUrl}" target="_blank">${shortUrl}</a>`;
+        list.innerHTML = '';
+        const li = document.createElement('li');
+        li.className = 'empty';
+        li.textContent = 'Could not load history: ' + error.message;
+        list.appendChild(li);
+        $('count').textContent = '0';
+        return;
       }
+      renderList(data || []);
+    }
+
+    function renderList(rows) {
+      const list = $('list');
+      list.innerHTML = '';
+      $('count').textContent = rows.length;
+
+      if (!rows.length) {
+        const li = document.createElement('li');
+        li.className = 'empty';
+        li.textContent = 'No links yet. Create your first one above.';
+        list.appendChild(li);
+        return;
+      }
+
+      for (const row of rows) {
+        const li = document.createElement('li');
+        li.className = 'item';
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        const a = document.createElement('a');
+        a.href = shortUrlFor(row.slug);
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = '/' + row.slug;
+        const dest = document.createElement('div');
+        dest.className = 'dest';
+        dest.textContent = row.destination_url;
+        dest.title = row.destination_url;
+        meta.append(a, dest);
+        if (row.created_at) {
+          const when = document.createElement('div');
+          when.className = 'when';
+          when.textContent = timeAgo(row.created_at);
+          meta.appendChild(when);
+        }
+
+        const acts = document.createElement('div');
+        acts.className = 'acts';
+        const cp = document.createElement('button');
+        cp.className = 'mini'; cp.type = 'button'; cp.title = 'Copy short link'; cp.setAttribute('aria-label', 'Copy short link');
+        cp.textContent = '⧉';
+        cp.addEventListener('click', () => copy(shortUrlFor(row.slug)));
+        const del = document.createElement('button');
+        del.className = 'mini del'; del.type = 'button'; del.title = 'Delete'; del.setAttribute('aria-label', 'Delete link');
+        del.textContent = '🗑';
+        del.addEventListener('click', () => askDelete(row.slug, li));
+        acts.append(cp, del);
+
+        li.append(meta, acts);
+        list.appendChild(li);
+      }
+    }
+
+    // ---------- delete flow ----------
+    let pending = null;
+    function askDelete(slug, el) {
+      pending = { slug, el };
+      $('dlg-slug').textContent = '/' + slug;
+      $('scrim').classList.add('open');$('dlg-yes').focus();
+    }
+    function closeDlg() { $('scrim').classList.remove('open'); pending = null; }
+
+    $('dlg-no').addEventListener('click', closeDlg);
+    $('scrim').addEventListener('click', (e) => { if (e.target ===$('scrim')) closeDlg(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDlg(); });
+
+    $('dlg-yes').addEventListener('click', async () => {
+      if (!pending) return;
+      const { slug, el } = pending;
+      const btn = $('dlg-yes');
+      btn.disabled = true;
+
+      // .select() returns the deleted rows, so we can tell if RLS blocked it silently
+      const { data, error } = await supabaseClient.from('urls').delete().eq('slug', slug).select();
+      btn.disabled = false;
+      closeDlg();
+
+      if (error) { toast('Delete failed: ' + error.message); return; }
+      if (!data || !data.length) { toast('Nothing deleted. Check your Supabase delete policy.'); return; }
+
+      el.classList.add('gone');
+      setTimeout(() => { el.remove(); updateCountAfterDelete(); }, 260);
+      toast('Link deleted');
     });
+
+    function updateCountAfterDelete() {
+      const n = $('list').querySelectorAll('.item').length;
+      $('count').textContent = n;
+      if (!n) renderList([]);
+    }
+
+    $('refresh').addEventListener('click', loadHistory);
+
+    // ---------- create ----------
+    $('shortener-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const url = $('url').value.trim();
+      const slug = $('slug').value.trim() || generateSlug();
+      const resultDiv = $('result');
+      const go = $('go');
+
+      if (!/^[A-Za-z0-9_-]+$/.test(slug)) {
+        resultDiv.innerHTML = '<div class="err">Short code can only use letters, numbers, dashes and underscores.</div>';
+        return;
+      }
+
+      go.disabled = true;
+      resultDiv.innerHTML = '<div class="busy">Creating link…</div>';
+
+      const { error } = await supabaseClient.from('urls').insert([{ slug: slug, destination_url: url }]);
+      go.disabled = false;
+
+      if (error) {
+        const taken = error.code === '23505' || error.message.includes('duplicate');
+        resultDiv.innerHTML = '';
+        const d = document.createElement('div');
+        d.className = 'err';
+        d.textContent = taken ? 'That short code is already taken. Try another one.' : 'Error: ' + error.message;
+        resultDiv.appendChild(d);
+        return;
+      }
+
+      const shortUrl = shortUrlFor(slug);
+      resultDiv.innerHTML = '';
+      const box = document.createElement('div');
+      box.className = 'ok';
+      const a = document.createElement('a');
+      a.href = shortUrl; a.target = '_blank'; a.rel = 'noopener'; a.textContent = shortUrl;
+      const cb = document.createElement('button');
+      cb.className = 'btn glass'; cb.type = 'button'; cb.textContent = 'Copy';
+      cb.addEventListener('click', () => copy(shortUrl));
+      box.append(a, cb);
+      resultDiv.appendChild(box);
+
+      $('url').value = '';$('slug').value = '';
+      loadHistory();
+    });
+
+    loadHistory();
   </script>
 </body>
 </html>
