@@ -37,6 +37,10 @@
       min-height: 100%;
       padding: 28px 14px calc(28px + env(safe-area-inset-bottom));
       display: flex; flex-direction: column; align-items: center; gap: 22px;
+      transition: filter .3s, opacity .3s;
+    }
+    main.locked {
+      display: none;
     }
 
     /* ---------- Aero window ---------- */
@@ -50,7 +54,7 @@
       -webkit-backdrop-filter: blur(16px) saturate(1.5);
       position: relative; overflow: hidden;
     }
-    .win::before { /* diagonal glass streak */
+    .win::before {
       content: ""; position: absolute; inset: 0; pointer-events: none;
       background: linear-gradient(118deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,.05) 28%, transparent 28.2%);
     }
@@ -167,6 +171,155 @@
       background: rgba(10, 20, 36, .85); border: 1px solid var(--glass-edge); box-shadow: 0 6px 20px rgba(0,0,0,.5); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
     #toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+    /* =========================================================
+       Windows 7 Logon Screen Styles
+       ========================================================= */
+    #win7-logon {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: radial-gradient(circle at 50% 32%, #18608c 0%, #0d3b5e 46%, #051a2d 100%);
+      background-size: cover;
+      user-select: none;
+      transition: opacity .45s ease, transform .45s ease;
+    }
+    #win7-logon.hidden {
+      opacity: 0; pointer-events: none; transform: scale(1.05);
+    }
+
+    .win7-logon-bloom {
+      position: absolute; pointer-events: none; border-radius: 50%;
+      background: radial-gradient(circle, rgba(135,215,255,.32) 0%, rgba(20,95,150,.1) 50%, transparent 75%);
+      width: 650px; height: 650px; top: 12%; left: 50%; transform: translateX(-50%);
+    }
+
+    .win7-centerpiece {
+      position: relative; z-index: 2;
+      display: flex; flex-direction: column; align-items: center;
+      margin-top: -30px;
+    }
+
+    /* Classic Windows 7 avatar frame */
+    .win7-avatar-frame {
+      width: 128px; height: 128px;
+      border-radius: 8px;
+      padding: 4px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.7) 100%);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255,255,255,0.9);
+      margin-bottom: 14px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .win7-avatar {
+      width: 100%; height: 100%;
+      border-radius: 5px;
+      overflow: hidden;
+      background: #0d3859;
+      box-shadow: inset 0 0 6px rgba(0,0,0,0.7);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .win7-avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: 5px;
+    }
+
+    .win7-username {
+      font-size: 22px;
+      font-weight: 500;
+      color: #ffffff;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.6);
+      margin-bottom: 14px;
+      letter-spacing: .4px;
+    }
+
+    /* Input & Forward Button Container */
+    .win7-form {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+    }
+    .win7-pass-wrap {
+      display: flex; align-items: center; position: relative;
+    }
+    .win7-input {
+      width: 200px; height: 29px;
+      padding: 3px 34px 3px 8px;
+      font-size: 14px;
+      color: #1a1a1a;
+      background: #ffffff;
+      border: 1px solid #7da2ce;
+      border-radius: 3px;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.5), 0 0 8px rgba(100,190,255,0.3);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .win7-input:focus {
+      border-color: #3d80df;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.4), 0 0 8px #52a5ff;
+    }
+    .win7-go-btn {
+      position: absolute; right: 2px;
+      width: 25px; height: 25px;
+      border-radius: 3px;
+      border: 1px solid #1f507b;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(180deg, #7ad6ff 0%, #369de7 49%, #1b6fb8 50%, #309be4 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 1px 2px rgba(0,0,0,0.4);
+      color: #fff;
+      padding: 0;
+      transition: filter .15s;
+    }
+    .win7-go-btn:hover {
+      filter: brightness(1.15);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 0 8px #5cc0ff;
+    }
+    .win7-go-btn:active {
+      transform: translateY(1px);
+      filter: brightness(0.95);
+    }
+    .win7-go-btn svg { width: 14px; height: 14px; fill: white; }
+
+    .win7-msg {
+      font-size: 12px;
+      min-height: 18px;
+      color: #ffb7af;
+      text-shadow: 0 1px 2px #000;
+      text-align: center;
+    }
+
+    /* Windows 7 Bottom Accessories */
+    .win7-bottom-bar {
+      position: absolute; bottom: 20px; left: 0; right: 0;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 26px; z-index: 2;
+    }
+    .win7-corner-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 38px; height: 38px; border-radius: 4px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.22);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
+      cursor: default;
+    }
+    .win7-shutdown-btn {
+      cursor: pointer;
+      background: linear-gradient(180deg, rgba(235,90,70,0.6), rgba(150,25,15,0.7));
+      border: 1px solid rgba(255,140,130,0.45);
+    }
+    .win7-shutdown-btn:hover {
+      background: linear-gradient(180deg, rgba(255,100,80,0.8), rgba(180,30,20,0.9));
+      box-shadow: 0 0 10px rgba(255,80,60,0.6);
+    }
+
+    .shake {
+      animation: w7shake .36s ease-in-out;
+    }
+    @keyframes w7shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+
     @media (max-width: 480px) {
       main { padding-top: 16px; gap: 16px; }
       .item { flex-wrap: wrap; }
@@ -179,9 +332,49 @@
   </style>
 </head>
 <body>
+  <!-- Windows 7 Logon Screen -->
+  <div id="win7-logon">
+    <div class="win7-logon-bloom"></div>
+
+    <div class="win7-centerpiece" id="win7-tile">
+      <div class="win7-avatar-frame">
+        <div class="win7-avatar">
+          <img src="profile.png" alt="prantik" class="win7-avatar-img" onerror="this.style.display='none'">
+        </div>
+      </div>
+      <div class="win7-username">prantik</div>
+
+      <form id="win7-login-form" class="win7-form" autocomplete="off">
+        <div class="win7-pass-wrap">
+          <input type="password" id="win7-password" class="win7-input" placeholder="Password" autofocus required>
+          <button type="submit" class="win7-go-btn" id="win7-submit" title="Log on" aria-label="Log on">
+            <svg viewBox="0 0 24 24">
+              <path d="M5 13h11.17l-4.88 4.88c-.39.39-.39 1.03 0 1.42.39.39 1.02.39 1.41 0l6.59-6.59c.39-.39.39-1.02 0-1.41l-6.58-6.6c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41L16.17 11H5c-.55 0-1 .45-1 1s.45 1 1 1z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="win7-msg" id="win7-msg"></div>
+      </form>
+    </div>
+
+    <!-- Bottom accessories: Ease of Access & Shut down -->
+    <div class="win7-bottom-bar">
+      <div class="win7-corner-btn" title="Ease of access" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="rgba(255,255,255,0.75)">
+          <path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z"/>
+        </svg>
+      </div>
+      <div class="win7-corner-btn win7-shutdown-btn" id="win7-shut" title="Shut down" aria-label="Lock screen">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="#ffffff">
+          <path d="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
   <div class="orb a"></div><div class="orb b"></div><div class="orb c"></div>
 
-  <main>
+  <main id="app-main" class="locked">
     <!-- Create window -->
     <section class="win" aria-label="Create short link">
       <div class="titlebar">
@@ -246,14 +439,76 @@
   <div id="toast" role="status"></div>
 
   <script>
-    // These placeholders will be replaced by GitHub Actions during deployment
+    // ---------- Authentication Logic ----------
+    const REQUIRED_PASS = 'vW8S9g';
+    const logonOverlay = $('win7-logon');
+    const loginForm = $('win7-login-form');
+    const passInput = $('win7-password');
+    const loginMsg = $('win7-msg');
+    const userTile = $('win7-tile');
+    const appMain = $('app-main');
+
+    function unlockSystem() {
+      sessionStorage.setItem('link_quicker_auth', 'prantik');
+      logonOverlay.classList.add('hidden');
+      appMain.classList.remove('locked');
+      setTimeout(() => {
+        logonOverlay.style.display = 'none';
+      }, 450);
+      loadHistory();
+    }
+
+    function lockSystem() {
+      sessionStorage.removeItem('link_quicker_auth');
+      logonOverlay.style.display = 'flex';
+      requestAnimationFrame(() => {
+        logonOverlay.classList.remove('hidden');
+      });
+      appMain.classList.add('locked');
+      passInput.value = '';
+      loginMsg.textContent = '';
+      passInput.focus();
+    }
+
+    loginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const entered = passInput.value;
+      if (entered === REQUIRED_PASS) {
+        loginMsg.style.color = '#7be39a';
+        loginMsg.textContent = 'Welcome';
+        unlockSystem();
+      } else {
+        loginMsg.style.color = '#ffb7af';
+        loginMsg.textContent = 'The password is incorrect. Try again.';
+        userTile.classList.remove('shake');
+        void userTile.offsetWidth;
+        userTile.classList.add('shake');
+        passInput.select();
+      }
+    });
+
+    $('win7-shut').addEventListener('click', () => {
+      passInput.value = '';
+      loginMsg.textContent = 'Locked.';
+      passInput.focus();
+    });
+
+    // Check previous authentication state within session
+    if (sessionStorage.getItem('link_quicker_auth') === 'prantik') {
+      logonOverlay.style.display = 'none';
+      appMain.classList.remove('locked');
+    } else {
+      passInput.focus();
+    }
+
+    // ---------- Supabase / Link Shortener Code ----------
     const SUPABASE_URL = 'BUILD_ENV_SUPABASE_URL';
     const SUPABASE_ANON_KEY = 'BUILD_ENV_SUPABASE_ANON_KEY';
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const $ = (id) => document.getElementById(id);
+    function $(id) { return document.getElementById(id); }
 
-    // ---------- helpers ----------
+    // Helpers
     function generateSlug(length = 6) {
       const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
       return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
@@ -289,12 +544,11 @@
       return 'just now';
     }
 
-    // ---------- history ----------
+    // History
     async function loadHistory() {
       const list = $('list');
       list.innerHTML = '<li class="empty">Loading…</li>';
 
-      // Newest first when a created_at column exists; otherwise fall back to default order
       let { data, error } = await supabaseClient.from('urls').select('*').order('created_at', { ascending: false });
       if (error) ({ data, error } = await supabaseClient.from('urls').select('*'));
 
@@ -363,17 +617,18 @@
       }
     }
 
-    // ---------- delete flow ----------
+    // Delete flow
     let pending = null;
     function askDelete(slug, el) {
       pending = { slug, el };
       $('dlg-slug').textContent = '/' + slug;
-      $('scrim').classList.add('open');$('dlg-yes').focus();
+      $('scrim').classList.add('open');
+      $('dlg-yes').focus();
     }
     function closeDlg() { $('scrim').classList.remove('open'); pending = null; }
 
     $('dlg-no').addEventListener('click', closeDlg);
-    $('scrim').addEventListener('click', (e) => { if (e.target ===$('scrim')) closeDlg(); });
+    $('scrim').addEventListener('click', (e) => { if (e.target === $('scrim')) closeDlg(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDlg(); });
 
     $('dlg-yes').addEventListener('click', async () => {
@@ -382,7 +637,6 @@
       const btn = $('dlg-yes');
       btn.disabled = true;
 
-      // .select() returns the deleted rows, so we can tell if RLS blocked it silently
       const { data, error } = await supabaseClient.from('urls').delete().eq('slug', slug).select();
       btn.disabled = false;
       closeDlg();
@@ -403,7 +657,7 @@
 
     $('refresh').addEventListener('click', loadHistory);
 
-    // ---------- create ----------
+    // Create flow
     $('shortener-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const url = $('url').value.trim();
@@ -444,11 +698,14 @@
       box.append(a, cb);
       resultDiv.appendChild(box);
 
-      $('url').value = '';$('slug').value = '';
+      $('url').value = ''; $('slug').value = '';
       loadHistory();
     });
 
-    loadHistory();
+    // Auto load history if already logged in
+    if (sessionStorage.getItem('link_quicker_auth') === 'prantik') {
+      loadHistory();
+    }
   </script>
 </body>
 </html>
